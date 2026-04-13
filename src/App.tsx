@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from "./components/Layout"
 import Planning from './pages/Planning'
@@ -12,10 +12,15 @@ import KanbanBoard from './components/KanbanBoard';
 
 
 
+
+
+
 function Dashboard() {
   const user = useAppStore((state) => state.user)
   const projects = useAppStore((state) => state.projects)
   const taskSummary = useAppStore((state) => state.taskSummary)
+  
+const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('cards')
 
   return (
     <div>
@@ -43,30 +48,72 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-8">
-            <h3 className="text-xl font-bold text-dev-text-main mb-4">Recent Tasks</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mockTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </div>
-          
-          <div className="mt-12">
-            <h3 className="text-xl font-bold text-dev-text-main mb-4">All Tasks (List View)</h3>
-            <ListView />
+          <div className="mt-8 flex gap-2">
+            <button
+              onClick={() => setCurrentView('cards')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentView === 'cards' 
+                  ? 'bg-[#6C3BFF] text-white' 
+                  : 'bg-[#22223B] text-[#9CA3AF] hover:text-[#E5E7EB]'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setCurrentView('list')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentView === 'list' 
+                  ? 'bg-[#6C3BFF] text-white' 
+                  : 'bg-[#22223B] text-[#9CA3AF] hover:text-[#E5E7EB]'
+              }`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setCurrentView('kanban')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentView === 'kanban' 
+                  ? 'bg-[#6C3BFF] text-white' 
+                  : 'bg-[#22223B] text-[#9CA3AF] hover:text-[#E5E7EB]'
+              }`}
+            >
+              Kanban
+            </button>
           </div>
 
-          <div className="mt-12 mb-12">
-            <h3 className="text-xl font-bold text-dev-text-main mb-4">Project Board (Kanban)</h3>
-            <KanbanBoard />
+          <div className="mt-8">
+            {currentView === 'cards' && (
+              <div>
+                <h3 className="text-xl font-bold text-dev-text-main mb-4">Recent Tasks</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mockTasks.map((task: any) => (
+
+
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentView === 'list' && (
+              <div>
+                <h3 className="text-xl font-bold text-dev-text-main mb-4">All Tasks (List View)</h3>
+                <ListView />
+              </div>
+            )}
+
+            {currentView === 'kanban' && (
+              <div>
+                <h3 className="text-xl font-bold text-dev-text-main mb-4">Project Board (Kanban)</h3>
+                <KanbanBoard />
+              </div>
+            )}
           </div>
           
       </div>
     </div>
   )
 }
-
 
 
 

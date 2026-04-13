@@ -14,7 +14,8 @@ interface Task {
 }
 
 const KanbanBoard: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks as Task[]);
+
 
   const columns = [
     { id: 'To Do', title: 'To Do', color: 'bg-[#6C3BFF]' },
