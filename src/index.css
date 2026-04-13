@@ -43,7 +43,6 @@ html.dark {
   background-color: rgb(var(--dev-bg));
   color: rgb(var(--dev-text-main));
 }
-
 body {
   @apply bg-dev-bg text-dev-text-main min-h-screen;
 }

@@ -1,6 +1,6 @@
 import { LayoutGrid, List, Calendar, Plus, Sun, Moon, Settings } from 'lucide-react'
 import useAppStore from '../stores/useAppStore'
-
+import {NavLink} from 'react-router-dom'
 function Sidebar() {
   const theme = useAppStore((state) => state.theme)
   const toggleTheme = useAppStore((state) => state.toggleTheme)
@@ -15,17 +15,34 @@ function Sidebar() {
 
       {/* Navigation Icons */}
       <div className="flex flex-col gap-4">
-        <button className="w-12 h-12 bg-dev-accent rounded-xl flex items-center justify-center">
-          <LayoutGrid className="text-white w-6 h-6" />
-        </button>
+        <NavLink 
+          to="/dashboard"
+          className={({ isActive }) =>
+            `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+              isActive 
+                ? "bg-dev-accent text-white" 
+                : "bg-dev-card text-dev-text-muted hover:bg-dev-border"
+            }`
+          }
+        >
+          <LayoutGrid className="w-6 h-6" />
+        </NavLink>
         <button className="w-12 h-12 bg-dev-card rounded-xl flex items-center justify-center hover:bg-dev-border">
           <List className="text-dev-text-muted w-6 h-6" />
         </button>
-        <button className="w-12 h-12 bg-dev-card rounded-xl flex items-center justify-center hover:bg-dev-border">
-          <Calendar className="text-dev-text-muted w-6 h-6" />
-        </button>
+        <NavLink 
+          to="/Planning"
+          className={({ isActive }) =>
+            `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+              isActive 
+                ? "bg-dev-accent text-white" 
+                : "bg-dev-card text-dev-text-muted hover:bg-dev-border"
+            }`
+          }
+        >
+          <Calendar className="w-6 h-6" />
+        </NavLink>
       </div>
-
       {/* Bottom Icons */}
       <div className="mt-auto flex flex-col gap-4">
         <button className="w-12 h-12 bg-dev-card rounded-xl flex items-center justify-center hover:bg-dev-border">

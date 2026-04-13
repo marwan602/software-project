@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import Header from './components/Header'
+import Layout from "./components/Layout"
+import Planning from './pages/Planning'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import useAppStore from './stores/useAppStore'
@@ -12,10 +12,7 @@ function Dashboard() {
   const taskSummary = useAppStore((state) => state.taskSummary)
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 bg-dev-bg min-h-screen">
-        <Header />
+    <div>
         <div className="p-8">
           <div className="rounded-3xl bg-dev-surface border border-dev-border p-8 mb-8">
             <p className="text-sm text-dev-text-muted">Welcome back,</p>
@@ -39,7 +36,6 @@ function Dashboard() {
               <p className="mt-4 text-4xl font-bold text-dev-text-main">{taskSummary.pending}</p>
             </div>
           </div>
-        </div>
       </div>
     </div>
   )
@@ -58,7 +54,10 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route element={<Layout />}>
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/planning" element={<Planning />} />
+      </Route>
       <Route path="/" element={<Navigate to="/login" />} />
     </Routes>
   )
