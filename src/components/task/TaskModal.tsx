@@ -9,37 +9,56 @@ export default function TaskModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      background: "rgba(0,0,0,0.5)"
-    }}>
-      <div style={{
-        background: "white",
-        padding: "20px",
-        margin: "100px auto",
-        width: "300px",
-        borderRadius: "10px"
-      }}>
-        <h2>Task Details</h2>
+   
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div className="bg-white w-[400px] rounded-2xl p-6 shadow-xl">
 
-        <input placeholder="Task title" />
-        <br /><br />
-        <textarea placeholder="Description"></textarea>
+      <h2 className="text-xl font-bold mb-4">Task Details</h2>
 
-        <h3>Subtasks</h3>
-        <ul>
-          <li>Design UI</li>
+      {/* Title */}
+      <input
+        className="w-full border p-2 rounded-lg mb-3"
+        placeholder="Task title"
+      />
+
+      {/* Description */}
+      <textarea
+        className="w-full border p-2 rounded-lg mb-4"
+        placeholder="Description"
+      />
+
+      {/* Subtasks */}
+      <div className="mb-4">
+        <h3 className="font-semibold mb-2">Subtasks</h3>
+        <ul className="space-y-1 text-sm">
+          <li> Design UI</li>
+          <li> Implement logic</li>
         </ul>
-
-        <h3>Comments</h3>
-        <p>This is a comment</p>
-
-        <button onClick={onClose}>Close</button>
       </div>
+
+      {/* Comments */}
+      <div className="mb-4">
+        <h3 className="font-semibold mb-2">Comments</h3>
+        <div className="text-sm bg-gray-100 p-2 rounded">
+          This is a comment
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-gray-200 rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+          Save
+        </button>
+      </div>
+
     </div>
-  );
+  </div>
+);
 }
