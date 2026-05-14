@@ -1,27 +1,16 @@
-import { useState } from 'react';
 import type React from 'react';
-import mockTasks from '../data/mockTasks.json';
 import TaskCard from './TaskCard';
+import useAppStore from '../stores/useAppStore';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'To Do' | 'In Progress' | 'Done';
-  priority: 'High' | 'Medium' | 'Low';
-  assignee: { name: string; avatar: string };
-  dueDate: string;
-  tags: string[];
-}
+const STATUSES = ['To Do', 'In Progress', 'Done'] as const;
 
-const KanbanBoard = ({ tasks: initialTasks }: { tasks?: Task[] }) => {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks ?? (mockTasks as Task[]));
-
+const KanbanBoard = () => {
+  const tasks = useAppStore((state) => state.tasks)
 
   const columns = [
-    { id: 'To Do', title: 'To Do', color: 'bg-[#6C3BFF]' },
-    { id: 'In Progress', title: 'In Progress', color: 'bg-[#F59E0B]' },
-    { id: 'Done', title: 'Done', color: 'bg-[#34D399]' },
+    { id: 'To Do' as const, title: 'To Do', color: 'bg-[#6C3BFF]' },
+    { id: 'In Progress' as const, title: 'In Progress', color: 'bg-[#F59E0B]' },
+    { id: 'Done' as const, title: 'Done', color: 'bg-[#34D399]' },
   ];
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -34,15 +23,16 @@ const KanbanBoard = ({ tasks: initialTasks }: { tasks?: Task[] }) => {
 
   const handleDrop = (e: React.DragEvent, status: string) => {
     const taskId = e.dataTransfer!.getData('taskId');
-    
-    const updatedTasks = tasks.map((task) => {
+    if (!STATUSES.includes(status as typeof STATUSES[number])) return;
+
+    const store = useAppStore.getState()
+    const updatedTasks = store.tasks.map((task) => {
       if (task.id === taskId) {
-        return { ...task, status: status as 'To Do' | 'In Progress' | 'Done' };
+        return { ...task, status: status as typeof STATUSES[number] };
       }
       return task;
     });
-
-    setTasks(updatedTasks);
+    useAppStore.setState({ tasks: updatedTasks });
   };
 
   return (

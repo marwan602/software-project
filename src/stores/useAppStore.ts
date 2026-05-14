@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import mockTasks from '../data/mockTasks.json'
 
 type ThemeMode = 'light' | 'dark'
 
@@ -22,12 +23,25 @@ interface TaskSummary {
   pending: number
 }
 
+export interface AppTask {
+  id: string
+  title: string
+  description: string
+  status: 'To Do' | 'In Progress' | 'Done'
+  priority: 'High' | 'Medium' | 'Low'
+  assignee: { name: string; avatar: string }
+  dueDate: string
+  tags: string[]
+}
+
 interface AppState {
   theme: ThemeMode
   toggleTheme: () => void
   user: UserProfile
   projects: ProjectSummary[]
   taskSummary: TaskSummary
+  tasks: AppTask[]
+  addTask: (task: AppTask) => void
 }
 
 const useAppStore = create<AppState>()(
@@ -53,10 +67,13 @@ const useAppStore = create<AppState>()(
         completed: 17,
         pending: 8,
       },
+      tasks: mockTasks as AppTask[],
+      addTask: (task) =>
+        set((state) => ({ tasks: [task, ...state.tasks] })),
     }),
     {
       name: 'devcollab-app-store',
-      partialize: (state) => ({ theme: state.theme }),
+      partialize: (state) => ({ theme: state.theme, tasks: state.tasks }),
     },
   ),
 )

@@ -5,8 +5,7 @@ import Layout from "./components/Layout"
 import Planning from './pages/Planning'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import useAppStore from './stores/useAppStore'
-import mockTasks from './data/mockTasks.json';
+import useAppStore, { type AppTask } from './stores/useAppStore'
 import TaskCard from './components/TaskCard';
 import ListView from "./components/ListView";  // ✅ CORRECT - matches your folder structure
 import KanbanBoard from './components/KanbanBoard';
@@ -20,24 +19,25 @@ function Dashboard() {
   const user = useAppStore((state) => state.user)
   const projects = useAppStore((state) => state.projects)
   const taskSummary = useAppStore((state) => state.taskSummary)
+  const tasks = useAppStore((state) => state.tasks)
+  const addTask = useAppStore((state) => state.addTask)
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<{message: string, visible: boolean}>({message: '', visible: false});
-  const [tasks, setTasks] = useState(mockTasks);
   
 const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('cards')
 
   const handleSaveTask = (data: { title: string; description: string }) => {
-    const newTask = {
+    const newTask: AppTask = {
       id: String(Date.now()),
       title: data.title,
       description: data.description,
-      status: 'To Do' as const,
-      priority: 'Medium' as const,
+      status: 'To Do',
+      priority: 'Medium',
       assignee: { name: user.name, avatar: '' },
       dueDate: new Date().toISOString().split('T')[0],
       tags: [],
     };
-    setTasks([newTask, ...tasks]);
+    addTask(newTask);
     setToast({ message: "Task created successfully", visible: true });
   }
 
@@ -137,8 +137,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
             {currentView === 'kanban' && (
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">Project Board (Kanban)</h3>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <KanbanBoard tasks={tasks as any} />
+                <KanbanBoard />
               </div>
             )}
           </div>
