@@ -5,8 +5,7 @@ import Layout from "./components/Layout"
 import Planning from './pages/Planning'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import useAppStore from './stores/useAppStore'
-import mockTasks from './data/mockTasks.json';
+import useAppStore, { type AppTask } from './stores/useAppStore'
 import TaskCard from './components/TaskCard';
 import ListView from "./components/ListView";  // ✅ CORRECT - matches your folder structure
 import KanbanBoard from './components/KanbanBoard';
@@ -16,16 +15,31 @@ import HeaderWidget from './components/HeaderWidget';
 
 
 
-
-
 function Dashboard() {
   const user = useAppStore((state) => state.user)
   const projects = useAppStore((state) => state.projects)
   const taskSummary = useAppStore((state) => state.taskSummary)
+  const tasks = useAppStore((state) => state.tasks)
+  const addTask = useAppStore((state) => state.addTask)
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<{message: string, visible: boolean}>({message: '', visible: false});
   
 const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('cards')
+
+  const handleSaveTask = (data: { title: string; description: string }) => {
+    const newTask: AppTask = {
+      id: String(Date.now()),
+      title: data.title,
+      description: data.description,
+      status: 'To Do',
+      priority: 'Medium',
+      assignee: { name: user.name, avatar: '' },
+      dueDate: new Date().toISOString().split('T')[0],
+      tags: [],
+    };
+    addTask(newTask);
+    setToast({ message: "Task created successfully", visible: true });
+  }
 
   return (
     <div>
@@ -43,7 +57,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
           <div className="mb-8">
             <HeaderWidget />
           </div>
-          <TaskModal isOpen={open} onClose={() => setOpen(false)} onSave={() => setToast({message: "Task created successfully", visible: true})} />
+          <TaskModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSaveTask} />
           <div className="rounded-3xl bg-dev-surface border border-dev-border p-8 mb-8">
             <p className="text-sm text-dev-text-muted">Welcome back,</p>
             <h2 className="text-3xl font-bold text-dev-text-main">{user.name}</h2>
@@ -105,10 +119,9 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">Recent Tasks</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mockTasks.map((task: any) => (
-
-
-                    <TaskCard key={task.id} task={task} onDelete={() => setToast({message: "Task deleted successfully", visible: true})} />
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {tasks.map((task: any, idx: number) => (
+                    <TaskCard key={idx} task={task} onDelete={() => setToast({message: "Task deleted successfully", visible: true})} />
                   ))}
                 </div>
               </div>
@@ -117,7 +130,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
             {currentView === 'list' && (
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">All Tasks (List View)</h3>
-                <ListView />
+                <ListView tasks={tasks} />
               </div>
             )}
 
