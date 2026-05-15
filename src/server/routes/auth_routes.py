@@ -11,8 +11,7 @@ def register():
 def login():
     return login_user()
 
-
 @auth_bp.route('/me', methods=['GET'])
-@token_required 
+@token_required
 def me(current_user):
     return get_user_profile(current_user)
