@@ -278,6 +278,7 @@ export default function Planning() {
   }, [tasks])
 
   const { timelineStart, days, totalDays } = timelineData
+  const safeTimelineStart: Date = timelineStart ?? new Date()
   const timelineWidth = totalDays * DAY_WIDTH
 
   // Sync horizontal scroll between header and body, and vertical scroll between sidebar and body
@@ -417,7 +418,7 @@ export default function Planning() {
                   key={task.id}
                   task={task}
                   index={index}
-                  timelineStart={timelineStart}
+                  timelineStart={safeTimelineStart}
                 />
               ))}
             </div>

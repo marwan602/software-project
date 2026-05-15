@@ -1,23 +1,7 @@
-import React from 'react';
 import mockTasks from '../data/mockTasks.json';
 
-interface Assignee {
-  name: string;
-  avatar: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'To Do' | 'In Progress' | 'Done';
-  priority: 'High' | 'Medium' | 'Low';
-  assignee: Assignee;
-  dueDate: string;
-  tags: string[];
-}
-
-const ListView: React.FC = () => {
+const ListView = ({ tasks }: { tasks?: typeof mockTasks }) => {
+  const items = tasks ?? mockTasks;
   
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -51,7 +35,7 @@ const ListView: React.FC = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-[#2E2E4D]">
-          {mockTasks.map((task) => (
+          {items.map((task) => (
             <tr key={task.id} className="hover:bg-[#2E2E4D] transition-colors">
               <td className="px-6 py-4">
                 <p className="text-[#E5E7EB] font-medium">{task.title}</p>

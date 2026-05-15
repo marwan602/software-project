@@ -1,13 +1,22 @@
 // Backend integration feature
 import { useState, useEffect } from 'react';
+import type React from 'react';
+import useAppStore from '../../stores/useAppStore';
+import type { AppTask } from '../../stores/useAppStore';
+
+const API_BASE = 'http://localhost:5000/api';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: () => void;
+  onSave?: (task: { title: string; description: string }) => void;
+  task?: AppTask | null;
 };
 
-export default function TaskModal({ isOpen, onClose, onSave }: Props) {
+export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
   const [subtasks, setSubtasks] = useState<Array<{ id: number; title: string; completed: boolean }>>([]);
   const [isLoadingSubtasks, setIsLoadingSubtasks] = useState(false);
   const [subtaskText, setSubtaskText] = useState('');
@@ -15,13 +24,40 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
   const [comments, setComments] = useState<Array<{ id: number; author: string; text: string }>>([]);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
-  // Fetch subtasks from the Flask backend
+  const editTask = useAppStore((s) => s.editTask);
+  const createTask = useAppStore((s) => s.createTask);
+  const taskId = task ? Number(task.id) : null;
+  const hasSavedTask = taskId !== null && Number.isFinite(taskId);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (task) {
+        setTitle(task.title);
+        setDescription(task.description);
+      } else {
+        setTitle('');
+        setDescription('');
+      }
+      setSubtasks([]);
+      setComments([]);
+      setSubtaskText('');
+      setCommentText('');
+
+      if (hasSavedTask) {
+        fetchSubtasks();
+        fetchComments();
+      }
+    }
+  }, [isOpen, task, hasSavedTask]);
+
   const fetchSubtasks = async () => {
+    if (!hasSavedTask) return;
+
     setIsLoadingSubtasks(true);
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/subtasks/task/1');
+      const response = await fetch(`${API_BASE}/subtasks/task/${taskId}`);
       const data = await response.json();
       console.log('Fetched Subtasks:', data);
 
@@ -35,11 +71,11 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
     }
   };
 
-  // Fetch comments from the Flask backend
   const fetchComments = async () => {
-    setIsLoadingComments(true);
+    if (!hasSavedTask) return;
+
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/comments/task/1');
+      const response = await fetch(`${API_BASE}/comments/task/${taskId}`);
       const data = await response.json();
       console.log('Fetched Comments:', data);
 
@@ -48,43 +84,20 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
-    } finally {
-      setIsLoadingComments(false);
     }
   };
 
-  // Fetch subtasks and comments when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchSubtasks();
-      fetchComments();
-    }
-  }, [isOpen]);
-
   const handleSubmitSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!subtaskText.trim()) {
-      return;
-    }
-
+    if (!hasSavedTask || !subtaskText.trim()) return;
     setIsSubmittingSubtask(true);
-
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/subtasks', {
+      const response = await fetch(`${API_BASE}/subtasks`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId: 1,
-          title: subtaskText,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, title: subtaskText }),
       });
-
       const data = await response.json();
-      console.log('Subtask API Response:', data);
-
       if (data.success) {
         setSubtaskText('');
         fetchSubtasks();
@@ -98,23 +111,13 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
 
   const handleToggleSubtaskStatus = async (subtaskId: number, currentStatus: boolean) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/subtasks/${subtaskId}`, {
+      const response = await fetch(`${API_BASE}/subtasks/${subtaskId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          completed: !currentStatus,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !currentStatus }),
       });
-
       const data = await response.json();
-      console.log('Toggle Subtask Response:', data);
-
-      if (data.success) {
-        // Refresh the subtasks list to get updated data
-        fetchSubtasks();
-      }
+      if (data.success) fetchSubtasks();
     } catch (error) {
       console.error('Error toggling subtask status:', error);
     }
@@ -122,20 +125,12 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
 
   const handleDeleteComment = async (commentId: number) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/comments/${commentId}`, {
+      const response = await fetch(`${API_BASE}/comments/${commentId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
       const data = await response.json();
-      console.log('Delete Comment Response:', data);
-
-      if (data.success) {
-        // Refresh the comments list after deletion
-        fetchComments();
-      }
+      if (data.success) fetchComments();
     } catch (error) {
       console.error('Error deleting comment:', error);
     }
@@ -143,61 +138,61 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
 
   const handleDeleteSubtask = async (subtaskId: number) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/subtasks/${subtaskId}`, {
+      const response = await fetch(`${API_BASE}/subtasks/${subtaskId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
       const data = await response.json();
-      console.log('Delete Subtask Response:', data);
-
-      if (data.success) {
-        // Refresh the subtasks list after deletion
-        fetchSubtasks();
-      }
+      if (data.success) fetchSubtasks();
     } catch (error) {
       console.error('Error deleting subtask:', error);
     }
   };
 
   const handleSubmitComment = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!commentText.trim()) {
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    const response = await fetch('http://127.0.0.1:5000/api/comments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        taskId: 1,
-        author: 'Shadw',
-        text: commentText,
-      }),
-    });
-
-    const data = await response.json();
-    console.log('Comment API Response:', data);
-
-    if (data.success) {
-      setComments([...comments, data.data]);
-      setCommentText('');
-      fetchComments();
+    e.preventDefault();
+    if (!hasSavedTask || !commentText.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, author: 'Shadw', text: commentText }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCommentText('');
+        fetchComments();
+      }
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error('Error submitting comment:', error);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
+
+  const handleSave = async () => {
+    if (!title.trim()) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      if (task) {
+        await editTask(task.id, { title: title.trim(), description: description.trim() });
+      } else {
+        await createTask({ title: title.trim(), description: description.trim() });
+      }
+      onSave?.({ title: title.trim(), description: description.trim() });
+      setTitle('');
+      setDescription('');
+      onClose();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to save task';
+      setSaveError(msg);
+      console.error('Error saving task:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -205,12 +200,14 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center px-4">
       <div className="bg-[#1e1e2f] text-white w-full max-w-[400px] rounded-2xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
 
-        <h2 className="text-xl font-bold mb-5">Task Details</h2>
+        <h2 className="text-xl font-bold mb-5">{task ? 'Edit Task' : 'Task Details'}</h2>
 
         {/* Title */}
         <div className="mb-5">
           <label className="block text-sm font-medium mb-2 text-gray-200">Title</label>
           <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             className="w-full bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
             placeholder="Task title"
           />
@@ -220,6 +217,8 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
         <div className="mb-5">
           <label className="block text-sm font-medium mb-2 text-gray-200">Description</label>
           <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             className="w-full min-h-[100px] resize-none bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
             placeholder="Description"
           />
@@ -229,7 +228,9 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
         <div className="mb-5">
           <h3 className="font-semibold mb-3 text-gray-100">Subtasks</h3>
           <ul className="space-y-2 text-sm text-gray-200 mb-3">
-            {isLoadingSubtasks ? (
+            {!hasSavedTask ? (
+              <li className="text-gray-400 italic">Save the task before adding subtasks.</li>
+            ) : isLoadingSubtasks ? (
               <li className="text-gray-400 italic">Loading subtasks...</li>
             ) : subtasks.length > 0 ? (
               subtasks.map((subtask) => (
@@ -260,7 +261,6 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
             )}
           </ul>
 
-          {/* Add Subtask Form */}
           <form onSubmit={handleSubmitSubtask} className="flex flex-col gap-2">
             <input
               type="text"
@@ -271,7 +271,7 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
             />
             <button
               type="submit"
-              disabled={isSubmittingSubtask || !subtaskText.trim()}
+              disabled={isSubmittingSubtask || !hasSavedTask || !subtaskText.trim()}
               className="w-full px-4 py-2 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-500 transition disabled:bg-gray-600 disabled:cursor-not-allowed text-sm"
             >
               {isSubmittingSubtask ? 'Adding...' : 'Add Subtask'}
@@ -282,10 +282,11 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
         {/* Comments */}
         <div className="mb-6">
           <h3 className="font-semibold mb-3 text-gray-100">Comments</h3>
-          
-          {/* Comments List */}
           <div className="space-y-3 mb-4">
-            {comments.map((comment) => (
+            {!hasSavedTask ? (
+              <p className="text-sm text-gray-400 italic">Save the task before adding comments.</p>
+            ) : comments.length > 0 ? (
+              comments.map((comment) => (
               <div
                 key={comment.id}
                 className="bg-[#2a2a40] border border-gray-700 p-3 rounded-2xl group"
@@ -304,10 +305,12 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
                   </button>
                 </div>
               </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-gray-400 italic">No comments yet</p>
+            )}
           </div>
 
-          {/* Comment Form */}
           <form onSubmit={handleSubmitComment} className="mt-4">
             <div className="flex flex-col gap-2">
               <textarea
@@ -318,7 +321,7 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
               />
               <button
                 type="submit"
-                disabled={isSubmitting || !commentText.trim()}
+                disabled={isSubmitting || !hasSavedTask || !commentText.trim()}
                 className="w-full px-4 py-2 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-500 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Posting...' : 'Post Comment'}
@@ -326,6 +329,12 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
             </div>
           </form>
         </div>
+
+        {saveError && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-sm text-red-400">
+            {saveError}
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -337,13 +346,11 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
           </button>
 
           <button
-            onClick={() => {
-              onSave?.();
-              onClose();
-            }}
-            className="w-full sm:w-auto px-5 py-3 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-500 transition"
+            onClick={handleSave}
+            disabled={saving || !title.trim()}
+            className="w-full sm:w-auto px-5 py-3 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-500 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
           >
-            Save
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
 
@@ -351,5 +358,3 @@ export default function TaskModal({ isOpen, onClose, onSave }: Props) {
     </div>
   );
 }
-
-

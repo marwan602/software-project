@@ -5,27 +5,52 @@ import Layout from "./components/Layout"
 import Planning from './pages/Planning'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import useAppStore from './stores/useAppStore'
-import mockTasks from './data/mockTasks.json';
+import useAppStore, { type AppTask } from './stores/useAppStore'
 import TaskCard from './components/TaskCard';
-import ListView from "./components/ListView";  // ✅ CORRECT - matches your folder structure
+import ListView from "./components/ListView";
 import KanbanBoard from './components/KanbanBoard';
 import Toast from './components/Toast';
 import HeaderWidget from './components/HeaderWidget';
-
-
-
-
-
 
 function Dashboard() {
   const user = useAppStore((state) => state.user)
   const projects = useAppStore((state) => state.projects)
   const taskSummary = useAppStore((state) => state.taskSummary)
+  const tasks = useAppStore((state) => state.tasks)
+  const fetchTasks = useAppStore((state) => state.fetchTasks)
+  const deleteTask = useAppStore((state) => state.deleteTask)
   const [open, setOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<AppTask | null>(null);
   const [toast, setToast] = useState<{message: string, visible: boolean}>({message: '', visible: false});
-  
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
 const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('cards')
+
+  const handleEditTask = (task: AppTask) => {
+    setEditingTask(task);
+    setOpen(true);
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    try {
+      await deleteTask(id);
+      setToast({ message: "Task deleted successfully", visible: true });
+    } catch {
+      setToast({ message: "Failed to delete task", visible: true });
+    }
+  };
+
+  const handleModalClose = () => {
+    setOpen(false);
+    setEditingTask(null);
+  };
+
+  const handleModalSave = () => {
+    setToast({ message: editingTask ? "Task updated successfully" : "Task created successfully", visible: true });
+  };
 
   return (
     <div>
@@ -33,7 +58,10 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
           <div className="mb-6 flex justify-start">
             <button
               type="button"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setEditingTask(null);
+                setOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-white font-medium shadow-lg shadow-violet-500/20 transition transform hover:brightness-110 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-violet-300"
             >
               <span className="text-xl leading-none">+</span>
@@ -43,7 +71,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
           <div className="mb-8">
             <HeaderWidget />
           </div>
-          <TaskModal isOpen={open} onClose={() => setOpen(false)} onSave={() => setToast({message: "Task created successfully", visible: true})} />
+          <TaskModal isOpen={open} onClose={handleModalClose} onSave={handleModalSave} task={editingTask} />
           <div className="rounded-3xl bg-dev-surface border border-dev-border p-8 mb-8">
             <p className="text-sm text-dev-text-muted">Welcome back,</p>
             <h2 className="text-3xl font-bold text-dev-text-main">{user.name}</h2>
@@ -105,10 +133,8 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">Recent Tasks</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mockTasks.map((task: any) => (
-
-
-                    <TaskCard key={task.id} task={task} onDelete={() => setToast({message: "Task deleted successfully", visible: true})} />
+                  {tasks.map((task) => (
+                    <TaskCard key={task.id} task={task} onDelete={handleDeleteTask} onEdit={handleEditTask} />
                   ))}
                 </div>
               </div>
@@ -117,7 +143,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
             {currentView === 'list' && (
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">All Tasks (List View)</h3>
-                <ListView />
+                <ListView tasks={tasks} />
               </div>
             )}
 
@@ -134,9 +160,6 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
     </div>
   )
 }
-
-
-
 
 function App() {
   const theme = useAppStore((state) => state.theme)
