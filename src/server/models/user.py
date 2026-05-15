@@ -1,4 +1,4 @@
-from config import db# Use the existing project DB
+from config import db 
 from datetime import datetime
 
 class User(db.Model):

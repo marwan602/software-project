@@ -14,19 +14,13 @@ To run this application:
 
 The API will be available at: http://localhost:5000
 """
-
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
 
-# Import configuration and database
 from config import db, init_db
-
-# Import blueprints (routes)
-from routes import subtask_bp, comment_bp, health_bp, auth_bp
 from routes.auth_routes import auth_bp
-
-
 def create_app():
     """
     Application factory function.
@@ -42,68 +36,23 @@ def create_app():
     """
     # Create Flask app
     app = Flask(__name__)
-    
-    # Set Flask configuration
     app.config['JSON_SORT_KEYS'] = False
     
-    # Initialize database with Flask app
     init_db(app)
     
-    # Enable CORS for all routes
-    # This allows frontend to communicate with the backend
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
-        }
-    })
+    CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type"]}})
     
-    # Register blueprints (API route groups)
+    from routes import health_bp, subtask_bp, comment_bp 
     app.register_blueprint(health_bp)
     app.register_blueprint(subtask_bp)
     app.register_blueprint(comment_bp)
-    app.register_blueprint(auth_bp, url_prefix='/api/auth') 
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     
-
-
-
-    print("\n--- REGISTERED ROUTES ---")
-    for rule in app.url_map.iter_rules():
-        print(f"{rule.endpoint}: {rule}")
-    print("-------------------------\n")
-
-
-    # Error handler for 404 (Not Found)
     @app.errorhandler(404)
     def not_found_error(error):
-        """Handle 404 errors."""
-        return jsonify({
-            'success': False,
-            'error': 'Endpoint not found'
-        }), 404
-    
-    # Error handler for 405 (Method Not Allowed)
-    @app.errorhandler(405)
-    def method_not_allowed_error(error):
-        """Handle 405 errors."""
-        return jsonify({
-            'success': False,
-            'error': 'Method not allowed'
-        }), 405
-    
-    # Error handler for 500 (Internal Server Error)
-    @app.errorhandler(500)
-    def internal_server_error(error):
-        """Handle 500 errors."""
-        return jsonify({
-            'success': False,
-            'error': 'Internal server error'
-        }), 500
+        return jsonify({'success': False, 'error': 'Endpoint not found'}), 404
     
     return app
-
-
 # Create the Flask app instance
 app = create_app()
 
