@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server:flask": "cd src/server && python app.py",
-    "server:backend": "cd backend && npm run dev",
+    "server:backend": "npm run server:flask",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

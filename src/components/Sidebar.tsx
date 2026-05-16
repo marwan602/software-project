@@ -1,6 +1,6 @@
 import { LayoutGrid, List, Calendar, Plus, Sun, Moon, Settings } from 'lucide-react'
 import useAppStore from '../stores/useAppStore'
-import {NavLink} from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 function Sidebar() {
   const theme = useAppStore((state) => state.theme)
   const toggleTheme = useAppStore((state) => state.toggleTheme)
@@ -31,7 +31,7 @@ function Sidebar() {
           <List className="text-dev-text-muted w-6 h-6" />
         </button>
         <NavLink 
-          to="/Planning"
+          to="/planning"
           className={({ isActive }) =>
             `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
               isActive 
@@ -56,9 +56,18 @@ function Sidebar() {
         >
           {isDark ? <Sun className="text-dev-text-muted w-6 h-6" /> : <Moon className="text-dev-text-muted w-6 h-6" />}
         </button>
-        <button className="w-12 h-12 bg-dev-card rounded-xl flex items-center justify-center hover:bg-dev-border">
-          <Settings className="text-dev-text-muted w-6 h-6" />
-        </button>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+              isActive
+                ? 'bg-dev-accent text-white'
+                : 'bg-dev-card text-dev-text-muted hover:bg-dev-border'
+            }`
+          }
+        >
+          <Settings className="w-6 h-6" />
+        </NavLink>
       </div>
     </div>
   )

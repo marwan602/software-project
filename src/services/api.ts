@@ -9,10 +9,28 @@ export type TaskData = {
   assignee_avatar?: string;
   due_date?: string;
   tags?: string[];
+  project_id?: number;
+  assignee?: {
+    name?: string;
+    avatar?: string;
+  };
+  dueDate?: string;
+};
+
+export type Project = {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  task_count: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Task = {
   id: number;
+  project_id: number | null;
+  project_name: string | null;
   title: string;
   description: string;
   status: string;
@@ -23,6 +41,12 @@ export type Task = {
   tags: string[];
   created_at: string;
   updated_at: string;
+};
+
+export type ProjectData = {
+  name: string;
+  description?: string;
+  color?: string;
 };
 
 export const fetchTasks = async (): Promise<Task[]> => {
@@ -67,4 +91,22 @@ export const deleteTask = async (id: number): Promise<void> => {
   });
   const json = await res.json();
   if (!json.success) throw new Error(json.message);
+};
+
+export const fetchProjects = async (): Promise<Project[]> => {
+  const res = await fetch(`${API_BASE}/projects`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message);
+  return json.data;
+};
+
+export const createProject = async (data: ProjectData): Promise<Project> => {
+  const res = await fetch(`${API_BASE}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message);
+  return json.data;
 };
