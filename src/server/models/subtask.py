@@ -25,7 +25,8 @@ class Subtask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Foreign Key (references Task table)
-    task_id = db.Column(db.Integer, nullable=False, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    task = db.relationship('Task', back_populates='subtasks')
     
     # Subtask Data
     title = db.Column(db.String(255), nullable=False)

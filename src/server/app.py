@@ -19,8 +19,12 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from config import db, init_db
-from routes.auth_routes import auth_bp
+from config import init_db
+from config.socket import init_socketio, socketio
+from routes import analytics_bp, auth_bp, comment_bp, health_bp, project_bp, subtask_bp, task_bp
+from routes.ai_routes import ai_bp
+
+
 def create_app():
     """
     Application factory function.
@@ -38,16 +42,16 @@ def create_app():
     app.config['JSON_SORT_KEYS'] = False
     
     init_db(app)
+    init_socketio(app)
 
-    CORS(app, resources={r"/*": {"origins": "*"}})
-    
-    from routes.auth_routes import auth_bp
-    from routes.ai_routes import ai_bp
-    
-    from routes import health_bp, subtask_bp, comment_bp 
+    CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+
     app.register_blueprint(health_bp)
     app.register_blueprint(subtask_bp)
     app.register_blueprint(comment_bp)
+    app.register_blueprint(task_bp)
+    app.register_blueprint(analytics_bp)
+    app.register_blueprint(project_bp)
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     
@@ -74,7 +78,8 @@ if __name__ == '__main__':
     debug = os.getenv('FLASK_DEBUG', '1') == '1'
     
     # Run the app on localhost:5000
-    app.run(
+    socketio.run(
+        app,
         host='0.0.0.0',
         port=5000,
         debug=debug

@@ -5,7 +5,9 @@ import Layout from "./components/Layout"
 import Planning from './pages/Planning'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Settings from './pages/Settings'
 import useAppStore, { type AppTask } from './stores/useAppStore'
+import { taskMatchesQuery } from './stores/useAppStore'
 import TaskCard from './components/TaskCard';
 import ListView from "./components/ListView";
 import KanbanBoard from './components/KanbanBoard';
@@ -15,8 +17,12 @@ import HeaderWidget from './components/HeaderWidget';
 function Dashboard() {
   const user = useAppStore((state) => state.user)
   const projects = useAppStore((state) => state.projects)
-  const taskSummary = useAppStore((state) => state.taskSummary)
   const tasks = useAppStore((state) => state.tasks)
+  const searchTerm = useAppStore((state) => state.searchTerm)
+  const activeProjectId = useAppStore((state) => state.activeProjectId)
+  const dashboardView = useAppStore((state) => state.dashboardView)
+  const hideCompletedInDashboard = useAppStore((state) => state.hideCompletedInDashboard)
+  const setDashboardView = useAppStore((state) => state.setDashboardView)
   const fetchTasks = useAppStore((state) => state.fetchTasks)
   const deleteTask = useAppStore((state) => state.deleteTask)
   const [open, setOpen] = useState(false);
@@ -27,7 +33,26 @@ function Dashboard() {
     fetchTasks();
   }, []);
 
-const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('cards')
+const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>(dashboardView)
+
+  useEffect(() => {
+    setCurrentView(dashboardView)
+  }, [dashboardView])
+
+  const visibleTasks = tasks.filter((task) => {
+    if (activeProjectId !== 'all' && task.projectId !== activeProjectId) return false
+    if (hideCompletedInDashboard && task.status === 'Done') return false
+    return taskMatchesQuery(task, searchTerm)
+  })
+
+  const visibleTaskSummary = visibleTasks.reduce(
+    (summary, task) => ({
+      total: summary.total + 1,
+      completed: summary.completed + (task.status === 'Done' ? 1 : 0),
+      pending: summary.pending + (task.status !== 'Done' ? 1 : 0),
+    }),
+    { total: 0, completed: 0, pending: 0 },
+  )
 
   const handleEditTask = (task: AppTask) => {
     setEditingTask(task);
@@ -74,10 +99,16 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
           <TaskModal isOpen={open} onClose={handleModalClose} onSave={handleModalSave} task={editingTask} />
           <div className="rounded-3xl bg-dev-surface border border-dev-border p-8 mb-8">
             <p className="text-sm text-dev-text-muted">Welcome back,</p>
-            <h2 className="text-3xl font-bold text-dev-text-main">{user.name}</h2>
+            <h2 className="text-3xl font-bold text-dev-text-main">{user.name || 'there'}</h2>
+            {user.email ? <p className="text-sm text-dev-text-muted mt-1">{user.email}</p> : null}
             <p className="text-dev-text-muted mt-2">
-              {projects.length} active projects · {taskSummary.total} tasks
+              {projects.length} active projects · {visibleTaskSummary.total} tasks in view
             </p>
+            {searchTerm ? (
+              <p className="text-sm text-dev-text-muted mt-2">
+                Showing {visibleTasks.length} of {tasks.length} tasks for “{searchTerm}”
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -87,17 +118,20 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
             </div>
             <div className="rounded-3xl bg-dev-card border border-dev-border p-6">
               <p className="text-sm text-dev-text-muted">Completed</p>
-              <p className="mt-4 text-4xl font-bold text-dev-text-main">{taskSummary.completed}</p>
+              <p className="mt-4 text-4xl font-bold text-dev-text-main">{visibleTaskSummary.completed}</p>
             </div>
             <div className="rounded-3xl bg-dev-card border border-dev-border p-6">
               <p className="text-sm text-dev-text-muted">Pending</p>
-              <p className="mt-4 text-4xl font-bold text-dev-text-main">{taskSummary.pending}</p>
+              <p className="mt-4 text-4xl font-bold text-dev-text-main">{visibleTaskSummary.pending}</p>
             </div>
           </div>
 
           <div className="mt-8 flex gap-2">
             <button
-              onClick={() => setCurrentView('cards')}
+              onClick={() => {
+                setCurrentView('cards')
+                setDashboardView('cards')
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 currentView === 'cards' 
                   ? 'bg-[#6C3BFF] text-white' 
@@ -107,7 +141,10 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
               Cards
             </button>
             <button
-              onClick={() => setCurrentView('list')}
+              onClick={() => {
+                setCurrentView('list')
+                setDashboardView('list')
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 currentView === 'list' 
                   ? 'bg-[#6C3BFF] text-white' 
@@ -117,7 +154,10 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
               List
             </button>
             <button
-              onClick={() => setCurrentView('kanban')}
+              onClick={() => {
+                setCurrentView('kanban')
+                setDashboardView('kanban')
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 currentView === 'kanban' 
                   ? 'bg-[#6C3BFF] text-white' 
@@ -133,7 +173,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">Recent Tasks</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tasks.map((task) => (
+                  {visibleTasks.map((task) => (
                     <TaskCard key={task.id} task={task} onDelete={handleDeleteTask} onEdit={handleEditTask} />
                   ))}
                 </div>
@@ -143,7 +183,7 @@ const [currentView, setCurrentView] = useState<'cards' | 'list' | 'kanban'>('car
             {currentView === 'list' && (
               <div>
                 <h3 className="text-xl font-bold text-dev-text-main mb-4">All Tasks (List View)</h3>
-                <ListView tasks={tasks} />
+                <ListView tasks={visibleTasks} />
               </div>
             )}
 
@@ -180,6 +220,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/planning" element={<Planning />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>

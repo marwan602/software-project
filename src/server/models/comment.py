@@ -25,7 +25,8 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Foreign Key (references Task table)
-    task_id = db.Column(db.Integer, nullable=False, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    task = db.relationship('Task', back_populates='comments')
     
     # Comment Data
     author = db.Column(db.String(100), nullable=False)

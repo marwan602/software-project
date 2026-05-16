@@ -1,18 +1,6 @@
-interface Assignee {
-  name: string;
-  avatar: string;
-}
+import type { AppTask } from '../stores/useAppStore';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'To Do' | 'In Progress' | 'Done';
-  priority: 'High' | 'Medium' | 'Low';
-  assignee: Assignee;
-  dueDate: string;
-  tags: string[];
-}
+type Task = AppTask;
 
 interface TaskCardProps {
   task: Task;
@@ -85,17 +73,23 @@ const TaskCard = ({ task, onDelete, onEdit }: TaskCardProps) => {
       {/* Footer: Assignee, Date, Status */}
       <div className="flex justify-between items-center border-t border-[#2E2E4D] pt-3">
         <div className="flex items-center gap-2">
-          <img 
-            src={task.assignee.avatar} 
-            alt={task.assignee.name} 
-            className="w-6 h-6 rounded-full border border-[#2E2E4D]"
-          />
-          <span className="text-xs text-[#9CA3AF]">{task.assignee.name}</span>
+          {task.assignee.avatar ? (
+            <img
+              src={task.assignee.avatar}
+              alt={task.assignee.name || 'Assignee'}
+              className="w-6 h-6 rounded-full border border-[#2E2E4D] object-cover"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full border border-[#2E2E4D] bg-[#0F0F1A] text-[10px] font-bold text-[#9CA3AF] flex items-center justify-center">
+              {(task.assignee.name || 'U')[0]?.toUpperCase()}
+            </div>
+          )}
+          <span className="text-xs text-[#9CA3AF]">{task.assignee.name || 'Unassigned'}</span>
         </div>
         
         <div className="flex items-center gap-3">
           <span className="text-xs text-[#9CA3AF] flex items-center gap-1">
-            📅 {task.dueDate}
+            📅 {task.dueDate || 'No due date'}
           </span>
           <span className={`text-xs font-bold ${getStatusColor(task.status)}`}>
             {task.status}

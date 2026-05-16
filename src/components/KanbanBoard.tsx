@@ -6,6 +6,28 @@ const STATUSES = ['To Do', 'In Progress', 'Done'] as const;
 
 const KanbanBoard = () => {
   const tasks = useAppStore((state) => state.tasks)
+  const searchTerm = useAppStore((state) => state.searchTerm)
+  const activeProjectId = useAppStore((state) => state.activeProjectId)
+  const hideCompletedInDashboard = useAppStore((state) => state.hideCompletedInDashboard)
+  const editTask = useAppStore((state) => state.editTask)
+
+  const visibleTasks = tasks.filter((task) => {
+    if (activeProjectId !== 'all' && task.projectId !== activeProjectId) return false
+    if (hideCompletedInDashboard && task.status === 'Done') return false
+
+    const haystack = [
+      task.title,
+      task.description,
+      task.status,
+      task.priority,
+      task.assignee.name,
+      task.tags.join(' '),
+    ]
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(searchTerm.trim().toLowerCase())
+  })
 
   const columns = [
     { id: 'To Do' as const, title: 'To Do', color: 'bg-[#6C3BFF]' },
@@ -25,14 +47,7 @@ const KanbanBoard = () => {
     const taskId = e.dataTransfer!.getData('taskId');
     if (!STATUSES.includes(status as typeof STATUSES[number])) return;
 
-    const store = useAppStore.getState()
-    const updatedTasks = store.tasks.map((task) => {
-      if (task.id === taskId) {
-        return { ...task, status: status as typeof STATUSES[number] };
-      }
-      return task;
-    });
-    useAppStore.setState({ tasks: updatedTasks });
+    void editTask(taskId, { status: status as typeof STATUSES[number] });
   };
 
   return (
@@ -51,13 +66,13 @@ const KanbanBoard = () => {
               <h3 className="text-[#E5E7EB] font-bold">{column.title}</h3>
             </div>
             <span className="text-[#9CA3AF] text-xs bg-[#22223B] px-2 py-1 rounded-full">
-              {tasks.filter((t) => t.status === column.id).length}
+              {visibleTasks.filter((t) => t.status === column.id).length}
             </span>
           </div>
 
           
           <div className="p-4 flex-1 flex flex-col gap-4 min-h-[200px]">
-            {tasks
+            {visibleTasks
               .filter((task) => task.status === column.id)
               .map((task) => (
                 <div
@@ -70,7 +85,7 @@ const KanbanBoard = () => {
                 </div>
               ))}
             
-            {tasks.filter((t) => t.status === column.id).length === 0 && (
+            {visibleTasks.filter((t) => t.status === column.id).length === 0 && (
               <p className="text-[#9CA3AF] text-sm text-center py-4">No tasks</p>
             )}
           </div>

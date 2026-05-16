@@ -3,19 +3,38 @@ import { useState, useEffect } from 'react';
 import type React from 'react';
 import useAppStore from '../../stores/useAppStore';
 import type { AppTask } from '../../stores/useAppStore';
+import type { TaskFormData } from '../../stores/useAppStore';
 
 const API_BASE = 'http://localhost:5000/api';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (task: { title: string; description: string }) => void;
+  onSave?: () => void;
   task?: AppTask | null;
+};
+
+const EMPTY_FORM: TaskFormData = {
+  title: '',
+  description: '',
+  projectId: '',
+  status: 'To Do',
+  priority: 'Medium',
+  assignee: { name: '', avatar: '' },
+  dueDate: '',
+  tags: [],
 };
 
 export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [projectId, setProjectId] = useState('')
+  const [status, setStatus] = useState<TaskFormData['status']>('To Do');
+  const [priority, setPriority] = useState<TaskFormData['priority']>('Medium');
+  const [assigneeName, setAssigneeName] = useState('');
+  const [assigneeAvatar, setAssigneeAvatar] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [tagsText, setTagsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [subtasks, setSubtasks] = useState<Array<{ id: number; title: string; completed: boolean }>>([]);
   const [isLoadingSubtasks, setIsLoadingSubtasks] = useState(false);
@@ -29,6 +48,8 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
 
   const editTask = useAppStore((s) => s.editTask);
   const createTask = useAppStore((s) => s.createTask);
+  const projects = useAppStore((s) => s.projects)
+  const activeProjectId = useAppStore((s) => s.activeProjectId)
   const taskId = task ? Number(task.id) : null;
   const hasSavedTask = taskId !== null && Number.isFinite(taskId);
 
@@ -37,9 +58,23 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
       if (task) {
         setTitle(task.title);
         setDescription(task.description);
+        setProjectId(task.projectId || (activeProjectId === 'all' ? projects[0]?.id || '' : activeProjectId))
+        setStatus(task.status);
+        setPriority(task.priority);
+        setAssigneeName(task.assignee.name);
+        setAssigneeAvatar(task.assignee.avatar);
+        setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
+        setTagsText(task.tags.join(', '));
       } else {
-        setTitle('');
-        setDescription('');
+        setTitle(EMPTY_FORM.title);
+        setDescription(EMPTY_FORM.description);
+        setProjectId(activeProjectId === 'all' ? projects[0]?.id || '' : activeProjectId)
+        setStatus(EMPTY_FORM.status);
+        setPriority(EMPTY_FORM.priority);
+        setAssigneeName(EMPTY_FORM.assignee.name);
+        setAssigneeAvatar(EMPTY_FORM.assignee.avatar);
+        setDueDate(EMPTY_FORM.dueDate);
+        setTagsText('');
       }
       setSubtasks([]);
       setComments([]);
@@ -51,7 +86,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
         fetchComments();
       }
     }
-  }, [isOpen, task, hasSavedTask]);
+  }, [isOpen, task, hasSavedTask, activeProjectId, projects]);
 
   const fetchSubtasks = async () => {
     if (!hasSavedTask) return;
@@ -204,7 +239,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
         { key: 'slow', add: 'Optimize performance and reduce latency by improving data fetching and rendering efficiency.' }
       ];
 
-      let addedContext = enhancements
+      const addedContext = enhancements
         .filter(e => input.includes(e.key))
         .map(e => e.add)
         .join(' ');
@@ -232,14 +267,39 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
     setSaving(true);
     setSaveError('');
     try {
+      const tags = tagsText
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      const payload: TaskFormData = {
+        title: title.trim(),
+        description: description.trim(),
+        projectId,
+        status,
+        priority,
+        assignee: {
+          name: assigneeName.trim(),
+          avatar: assigneeAvatar.trim(),
+        },
+        dueDate,
+        tags,
+      };
+
       if (task) {
-        await editTask(task.id, { title: title.trim(), description: description.trim() });
+        await editTask(task.id, payload);
       } else {
-        await createTask({ title: title.trim(), description: description.trim() });
+        await createTask(payload);
       }
-      onSave?.({ title: title.trim(), description: description.trim() });
+      onSave?.();
       setTitle('');
       setDescription('');
+      setStatus('To Do');
+      setPriority('Medium');
+      setAssigneeName('');
+      setAssigneeAvatar('');
+      setDueDate('');
+      setTagsText('');
       onClose();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to save task';
@@ -288,6 +348,91 @@ export default function TaskModal({ isOpen, onClose, onSave, task }: Props) {
             className="w-full min-h-[100px] resize-none bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
             placeholder="Description"
           />
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-sm font-medium mb-2 text-gray-200">Project</label>
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className="w-full bg-[#2a2a40] text-white border border-gray-600 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskFormData['status'])}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            >
+              <option>To Do</option>
+              <option>In Progress</option>
+              <option>Done</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Priority</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskFormData['priority'])}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Assignee Name</label>
+            <input
+              value={assigneeName}
+              onChange={(e) => setAssigneeName(e.target.value)}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="Who owns this task?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Assignee Avatar URL</label>
+            <input
+              value={assigneeAvatar}
+              onChange={(e) => setAssigneeAvatar(e.target.value)}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Due Date</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-200">Tags</label>
+            <input
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              className="w-full bg-[#2a2a40] text-white border border-gray-600 placeholder-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="design, frontend, qa"
+            />
+          </div>
         </div>
 
         {/* Subtasks */}

@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import useAppStore from '../stores/useAppStore'
 
 // --- 1. MODULAR TYPES & MOCK DATA ---
 type Task = {
   id: string | number
+  projectId: string | null
   name: string
   start_date: string // ISO string
   end_date: string   // ISO string
@@ -11,6 +13,8 @@ type Task = {
 
 type ApiTask = {
   id: number
+  project_id?: number | null
+  project_name?: string | null
   title?: string
   description?: string
   status?: 'To Do' | 'In Progress' | 'Done' | string
@@ -96,12 +100,18 @@ function normalizeTaskDates(task: ApiTask) {
 }
 
 function mapApiTasksToGantt(apiTasks: ApiTask[]): Task[] {
-  return apiTasks.map((task, index) => {
+  return apiTasks
+    .filter((task) => {
+      const status = (task.status || 'To Do').toLowerCase()
+      return status !== 'done' && status !== 'completed'
+    })
+    .map((task, index) => {
     const { start, end } = normalizeTaskDates(task)
     const status = (task.status || 'To Do').toLowerCase()
 
     return {
       id: parseTaskId(task, index),
+      projectId: task.project_id !== null && task.project_id !== undefined ? String(task.project_id) : null,
       name: task.title || `Task ${index + 1}`,
       start_date: start,
       end_date: end,
@@ -203,6 +213,8 @@ function BarList({ items }: { items: { label: string; value: number; color: stri
 
 // --- 5. MAIN CONTAINER ---
 export default function Planning() {
+  const searchTerm = useAppStore((state) => state.searchTerm)
+  const activeProjectId = useAppStore((state) => state.activeProjectId)
   const [tasks, setTasks] = useState<Task[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -285,10 +297,17 @@ export default function Planning() {
   const completionRate = summary?.productivityRate ?? 0
 
   const timelineData = useMemo(() => {
-    if (tasks.length === 0) return { start: new Date(), end: new Date(), days: [] as Date[], totalDays: 0 }
+    const filteredTasks = tasks.filter((task) => {
+      if (activeProjectId !== 'all' && task.projectId !== activeProjectId) return false
+      if (!searchTerm.trim()) return true
+      const haystack = task.name.toLowerCase()
+      return haystack.includes(searchTerm.trim().toLowerCase())
+    })
 
-    const startDates = tasks.map(t => new Date(t.start_date).getTime())
-    const endDates = tasks.map(t => new Date(t.end_date).getTime())
+    if (filteredTasks.length === 0) return { start: new Date(), end: new Date(), days: [] as Date[], totalDays: 0, filteredTasks }
+
+    const startDates = filteredTasks.map(t => new Date(t.start_date).getTime())
+    const endDates = filteredTasks.map(t => new Date(t.end_date).getTime())
 
     const minTime = Math.min(...startDates)
     const maxTime = Math.max(...endDates)
@@ -300,10 +319,10 @@ export default function Planning() {
 
     const days = Array.from({ length: totalDays }, (_, i) => addDays(timelineStart, i))
 
-    return { timelineStart, timelineEnd, days, totalDays }
-  }, [tasks])
+    return { timelineStart, timelineEnd, days, totalDays, filteredTasks }
+  }, [tasks, searchTerm, activeProjectId])
 
-  const { timelineStart, days, totalDays } = timelineData
+  const { timelineStart, days, totalDays, filteredTasks } = timelineData
   const safeTimelineStart: Date = timelineStart ?? new Date()
   const timelineWidth = totalDays * DAY_WIDTH
 
@@ -412,7 +431,7 @@ export default function Planning() {
 
           {/* PANEL 1: Fixed Sidebar */}
           <div ref={sidebarScrollRef} className="w-56 shrink-0 border-r border-dev-border z-10 bg-dev-surface overflow-y-hidden">
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <GanttTaskRow key={task.id} task={task} />
             ))}
           </div>
@@ -440,7 +459,7 @@ export default function Planning() {
               ))}
 
               {/* Task bars */}
-              {tasks.map((task, index) => (
+              {filteredTasks.map((task, index) => (
                 <GanttBar
                   key={task.id}
                   task={task}
