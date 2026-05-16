@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from config import init_db
 from config.socket import init_socketio, socketio
 from routes import analytics_bp, auth_bp, comment_bp, health_bp, project_bp, subtask_bp, task_bp
+from routes.ai_routes import ai_bp
 
 
 def create_app():
@@ -52,6 +53,7 @@ def create_app():
     app.register_blueprint(analytics_bp)
     app.register_blueprint(project_bp)
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(ai_bp, url_prefix='/api/ai')
     
     @app.errorhandler(404)
     def not_found_error(error):

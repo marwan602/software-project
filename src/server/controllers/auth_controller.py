@@ -86,7 +86,6 @@ def login_user():
     )
     return jsonify({'success': True, 'token': token, 'username': user.username}), 200
 
-
 def get_user_profile(current_user):
     return jsonify(
         {
