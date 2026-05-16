@@ -59,9 +59,13 @@ def login_user():
     password = data.get('password')
     user = User.query.filter_by(email=email).first()
     
-    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
-        return jsonify({"success": False, "error": "Invalid email or password"}), 401
-
+    try:
+        if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+            return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
+    except ValueError:
+        # Handle cases where password_hash is not a valid bcrypt hash
+        return jsonify({'success': False, 'error': 'Invalid account data. Please re-register.'}), 401
+            
     token = jwt.encode({
         'user_id': user.id,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
