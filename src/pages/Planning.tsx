@@ -123,7 +123,7 @@ function mapApiTasksToGantt(apiTasks: ApiTask[]): Task[] {
 // --- 3. CONSTANTS ---
 const ROW_HEIGHT = 48
 const DAY_WIDTH = 40 // Fixed pixels per day — the key to proper scaling
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const authHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('token')
